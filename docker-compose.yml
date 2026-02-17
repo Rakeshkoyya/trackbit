@@ -1,26 +1,6 @@
 version: "3.8"
 
 services:
-  db:
-    image: postgres:15-alpine
-    container_name: trackbit-db
-    environment:
-      - POSTGRES_USER=trackbit
-      - POSTGRES_PASSWORD=trackbit_password
-      - POSTGRES_DB=trackbit
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - trackbit-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U trackbit -d trackbit"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
   backend:
     build:
       context: ./backend
@@ -29,7 +9,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://trackbit:trackbit_password@db:5432/trackbit
+      - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - DEBUG=${DEBUG:-false}
       - WORKERS=${WORKERS:-2}
@@ -39,9 +19,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - trackbit-net
     restart: unless-stopped
@@ -69,6 +46,3 @@ services:
 networks:
   trackbit-net:
     driver: bridge
-
-volumes:
-  postgres_data:

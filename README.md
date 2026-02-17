@@ -33,7 +33,9 @@ git submodule update --init --recursive
 # Copy the example environment file
 cp .env.example .env
 
-# Edit .env and set your JWT_SECRET_KEY (min 32 characters)
+# Edit .env and configure:
+# - DATABASE_URL: Your AWS RDS PostgreSQL connection string
+# - JWT_SECRET_KEY: Authentication secret (min 32 characters)
 ```
 
 ### 3. Build and Run
@@ -53,15 +55,13 @@ docker-compose up --build -d
 | Frontend | http://localhost:3000        | Main application   |
 | Backend  | http://localhost:8000        | API server         |
 | API Docs | http://localhost:8000/docs   | Swagger UI         |
-| Database | localhost:5432               | PostgreSQL         |
 
 ## Services
 
-### Database (PostgreSQL)
-- Image: `postgres:15-alpine`
-- Port: `5432`
-- Credentials: `trackbit` / `trackbit_password`
-- Database: `trackbit`
+### Database (AWS RDS)
+- External PostgreSQL hosted on AWS
+- Configure via `DATABASE_URL` in `.env`
+- Format: `postgresql://user:password@your-rds-endpoint:5432/database`
 
 ### Backend (FastAPI)
 - Port: `8000`
@@ -91,8 +91,8 @@ docker-compose logs -f backend
 # Rebuild a specific service
 docker-compose up --build backend
 
-# Remove all containers and volumes (fresh start)
-docker-compose down -v
+# Remove all containers (fresh start)
+docker-compose down
 ```
 
 ## Updating Submodules
@@ -131,14 +131,16 @@ git submodule update --init --recursive
 ```
 
 ### Database connection issues
-Wait for the database health check to pass. The backend depends on the database being healthy before starting.
+- Verify your `DATABASE_URL` in `.env` is correct
+- Ensure AWS RDS security group allows connections from your IP/container
+- Check that the database exists and credentials are valid
 
 ### Port conflicts
-Ensure ports 3000, 5432, and 8000 are not in use by other applications.
+Ensure ports 3000 and 8000 are not in use by other applications.
 
 ### Rebuild from scratch
 ```bash
-docker-compose down -v
+docker-compose down
 docker-compose up --build
 ```
 
