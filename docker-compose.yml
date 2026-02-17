@@ -1,0 +1,74 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: trackbit-db
+    environment:
+      - POSTGRES_USER=trackbit
+      - POSTGRES_PASSWORD=trackbit_password
+      - POSTGRES_DB=trackbit
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - trackbit-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trackbit -d trackbit"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: trackbit-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://trackbit:trackbit_password@db:5432/trackbit
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DEBUG=${DEBUG:-false}
+      - WORKERS=${WORKERS:-2}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - trackbit-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=/api/v1
+        - BACKEND_URL=http://backend:8000
+    container_name: trackbit-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - trackbit-net
+    restart: unless-stopped
+
+networks:
+  trackbit-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
